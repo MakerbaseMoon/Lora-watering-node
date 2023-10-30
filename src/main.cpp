@@ -34,6 +34,9 @@ String outgoing;              // outgoing message
 String Mymessage = "";
 DHT dht(DhtPin, DHTTYPE);
 
+void onReceive(int packetSize);
+void sendMessage(String outgoing, byte MasterNode, byte Node1);
+
 void setup() {
     Serial.begin(9600);                   // initialize serial
 
@@ -112,8 +115,8 @@ void onReceive(int packetSize) {
         delay(100);
         Mymessage = "";
     }
-
 }
+
 void sendMessage(String outgoing, byte MasterNode, byte Node1) {
     LoRa.beginPacket();                 // start packet
     LoRa.write(MasterNode);             // add destination address
