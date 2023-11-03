@@ -35,9 +35,8 @@ DHT dht(DhtPin, DHTTYPE);
 // Tracks the time since last event fired
 unsigned long     previousMillis = 0;
 unsigned long int previoussecs   = 6;
-unsigned long int currentsecs    = 0;
 unsigned long     currentMillis  = 0;
-unsigned long     interval       = 6;
+unsigned long     interval       = 6 * 1000;
 
 void onReceive(int packetSize);
 void sendMessage(String outgoing, byte MasterNode, byte Node1);
@@ -65,18 +64,18 @@ void loop() {
 
     soilMoistureValue = analogRead(SensorPin);
 
-    currentMillis = millis() / 1000;
-    if(wateringState) {
-        if ((currentMillis - previoussecs) >= interval) {
-            digitalWrite(RelayPin, HIGH);
-            wateringState = false;
-        }
+    currentMillis = millis();
+    if( wateringState && ( (currentMillis - previoussecs) >= interval ) ) {
+        digitalWrite(RelayPin, HIGH);
+        wateringState = false;
+
     } else {
         if(soilMoistureValue < 200 || wateringSW == true) {
             digitalWrite(RelayPin, LOW);
+            previoussecs = millis();
+
             wateringState = true;
-            wateringSW = false;
-            previoussecs = millis() / 1000;
+            wateringSW    = false;
         }
     }
 
