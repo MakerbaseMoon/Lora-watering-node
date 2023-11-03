@@ -1,51 +1,55 @@
 #include <Arduino.h>
-/*
-    Lora Node1
-    The IoT Projects
 
-*/
+#include <header.h>
 
-#include "DHT.h"
-#include <SPI.h>              // include libraries
+#include <DHT.h>
+#include <SPI.h>       
 #include <LoRa.h>
 
-#define ss 10
-#define rst 9
+#define ss  10
+#define rst  9
 #define dio0 2
-#define DHTTYPE DHT11
+#define DHTTYPE DHT22
 
-int RelayPin = 4; // For relay
-int DhtPin = A1;
-int SensorPin = A0;
+int RelayPin    =  4;  // For relay
+int DhtPin      = A0;  // DHT
+int SensorPin   = A2;  // Soil moisture
 
-byte msgCount = 0;            // count of outgoing messages
+byte msgCount   = 0;
 byte MasterNode = 0xFF;
-byte Node1 = 0x01;
 
-int AirValue = 590;   //you need to replace this value with Value_1
-int WaterValue = 300;  //you need to replace this value with Value_2
+byte Node1      = NODE1_LORA_ADDRESS;
+
 int soilMoistureValue = 0;
-int soilmoisturepercent = 0;
 float humidity;
 float temperature; 
 
-int wateringSW = 0;
-String outgoing;              // outgoing message
+bool wateringSW     = false;
+bool wateringState  = false;
+
+String outgoing;            
 String Mymessage = "";
+
 DHT dht(DhtPin, DHTTYPE);
+
+// Tracks the time since last event fired
+unsigned long     previousMillis = 0;
+unsigned long int previoussecs   = 6;
+unsigned long int currentsecs    = 0;
+unsigned long     currentMillis  = 0;
+unsigned long     interval       = 6;
 
 void onReceive(int packetSize);
 void sendMessage(String outgoing, byte MasterNode, byte Node1);
 
 void setup() {
-    Serial.begin(9600);                   // initialize serial
-
+    Serial.begin(9600);
     while (!Serial);
-    pinMode(RelayPin, OUTPUT);
-    digitalWrite(RelayPin, LOW);
-    dht.begin();
-    
     Serial.println("LoRa Node1");
+
+    pinMode(RelayPin, OUTPUT);
+    digitalWrite(RelayPin, HIGH);
+    dht.begin();
 
     LoRa.setPins(ss, rst, dio0);
 
@@ -56,23 +60,26 @@ void setup() {
 }
 
 void loop() {
-    humidity = dht.readHumidity(); //讀取濕度
-    temperature = dht.readTemperature(); //讀取攝氏溫度
-    if (isnan(humidity) || isnan(temperature)){
-        Serial.println("DHT Reading Error !!");
-        return;
-    }
-        
-    soilMoistureValue = analogRead(SensorPin);  //put Sensor insert into soil
-    //  soilmoisturepercent = map(soilMoistureValue, AirValue, WaterValue, 0, 100);
-    
-    if (soilMoistureValue < 400){//if the humidity sensor returns a value<500
-        digitalWrite(RelayPin, HIGH);//The water pump waters the plant
-    } else { 
-        digitalWrite(RelayPin, LOW);//Water pump stops watering
+    humidity    = dht.readHumidity();
+    temperature = dht.readTemperature();
+
+    soilMoistureValue = analogRead(SensorPin);
+
+    currentMillis = millis() / 1000;
+    if(wateringState) {
+        if ((currentMillis - previoussecs) >= interval) {
+            digitalWrite(RelayPin, HIGH);
+            wateringState = false;
+        }
+    } else {
+        if(soilMoistureValue < 200 || wateringSW == true) {
+            digitalWrite(RelayPin, LOW);
+            wateringState = true;
+            wateringSW = false;
+            previoussecs = millis() / 1000;
+        }
     }
 
-    // parse for a packet, and call onReceive with the result:
     onReceive(LoRa.parsePacket());
 }
 
@@ -93,37 +100,41 @@ void onReceive(int packetSize) {
 
     if (incomingLength != incoming.length()) {   // check length for error
         // Serial.println("error: message length does not match length");
-        ;
-        return;                             // skip rest of function
+        return;
     }
 
     // if the recipient isn't this device or broadcast,
     if (recipient != Node1 && recipient != MasterNode) {
         //Serial.println("This message is not for me.");
-        ;
-        return;                             // skip rest of function
+        return;
     }
-    Serial.println("Node Received: " +incoming);
-    int Val = incoming.toInt();
-    if (Val == 10)
-    {
+    Serial.println("Node Received: " + incoming);
+    int index = incoming.indexOf(",");
+    int Val1 = incoming.substring(0, index).toInt();
+    int Val2 = incoming.substring(index + 1).toInt();
+
+    if (Val1 == 10) {
         Mymessage = Mymessage + temperature + "," 
                             + humidity + "," 
-                            + wateringSW + ","
+                            + soilMoistureValue + ","
                             + String(LoRa.packetRssi());
         sendMessage(Mymessage, MasterNode, Node1);
         delay(100);
         Mymessage = "";
     }
+
+    if(Val2 == 1) {
+        wateringSW = true;
+    }
 }
 
 void sendMessage(String outgoing, byte MasterNode, byte Node1) {
-    LoRa.beginPacket();                 // start packet
-    LoRa.write(MasterNode);             // add destination address
-    LoRa.write(Node1);                  // add sender address
-    LoRa.write(msgCount);               // add message ID
-    LoRa.write(outgoing.length());      // add payload length
-    LoRa.print(outgoing);               // add payload
-    LoRa.endPacket();                   // finish packet and send it
-    msgCount++;                         // increment message ID
+    LoRa.beginPacket();
+    LoRa.write(MasterNode);
+    LoRa.write(Node1);
+    LoRa.write(msgCount);
+    LoRa.write(outgoing.length());
+    LoRa.print(outgoing);
+    LoRa.endPacket();
+    msgCount++;
 }
