@@ -16,7 +16,7 @@ int DhtPin      = A0;  // DHT
 int SensorPin   = A2;  // Soil moisture
 
 byte msgCount   = 0;
-byte MasterNode = 0xFF;
+byte MasterNode = MASTER_NODE_ADDRESS;
 
 byte Node1      = NODE1_LORA_ADDRESS;
 
