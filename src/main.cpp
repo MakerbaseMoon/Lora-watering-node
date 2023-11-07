@@ -36,7 +36,7 @@ DHT dht(DhtPin, DHTTYPE);
 unsigned long     previousMillis = 0;
 unsigned long int previoussecs   = 6;
 unsigned long     currentMillis  = 0;
-unsigned long     interval       = 6 * 1000;
+unsigned long     interval       = WATERING_TIME * 1000;
 
 void onReceive(int packetSize);
 void sendMessage(String outgoing, byte MasterNode, byte Node1);
@@ -70,7 +70,7 @@ void loop() {
         wateringState = false;
 
     } else {
-        if(soilMoistureValue < 200 || wateringSW == true) {
+        if(soilMoistureValue < SOIL_MOISTURE_WATERING_VALUE || wateringSW == true) {
             digitalWrite(RelayPin, LOW);
             previoussecs = millis();
 
