@@ -20,6 +20,8 @@ byte MasterNode = MASTER_NODE_ADDRESS;
 
 byte Node1      = NODE1_LORA_ADDRESS;
 
+String Mymessage = "";
+
 int soilMoistureValue = 0;
 float humidity;
 float temperature; 
@@ -83,6 +85,7 @@ void loop() {
 
 void onReceive(int packetSize) {
     if (packetSize == 0) return;          // if there's no packet, return
+    if (Mymessage != "") return;
 
     // read packet header bytes:
     int recipient = LoRa.read();          // recipient address
@@ -111,8 +114,6 @@ void onReceive(int packetSize) {
     int Val1 = incoming.substring(0, index).toInt();
     int Val2 = incoming.substring(index + 1).toInt();
 
-    String Mymessage = "";
-
     if (Val1 == 10) {
         Mymessage = Mymessage + temperature + "," 
                             + humidity + "," 
@@ -125,6 +126,8 @@ void onReceive(int packetSize) {
     if(Val2 == 1) {
         wateringSW = true;
     }
+
+    Mymessage = "";
 }
 
 void sendMessage(String outgoing, byte MasterNode, byte Node1) {
