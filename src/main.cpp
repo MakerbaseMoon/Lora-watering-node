@@ -27,8 +27,7 @@ float temperature;
 bool wateringSW     = false;
 bool wateringState  = false;
 
-String outgoing;            
-String Mymessage = "";
+String outgoing;
 
 DHT dht(DhtPin, DHTTYPE);
 
@@ -112,6 +111,8 @@ void onReceive(int packetSize) {
     int Val1 = incoming.substring(0, index).toInt();
     int Val2 = incoming.substring(index + 1).toInt();
 
+    String Mymessage = "";
+
     if (Val1 == 10) {
         Mymessage = Mymessage + temperature + "," 
                             + humidity + "," 
@@ -119,7 +120,6 @@ void onReceive(int packetSize) {
                             + String(LoRa.packetRssi());
         sendMessage(Mymessage, MasterNode, Node1);
         delay(100);
-        Mymessage = "";
     }
 
     if(Val2 == 1) {
